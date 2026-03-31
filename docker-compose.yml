@@ -1,0 +1,57 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    volumes:
+      - ./assets:/app/assets
+    env_file:
+      - .env
+    environment:
+      # AI Configuration (Maia Router)
+      - MAIA_API_KEY=${MAIA_API_KEY}
+      - MAIA_BASE_URL=${MAIA_BASE_URL:-https://api.maiarouter.ai/v1}
+      - MODEL_OPENAI=${MODEL_OPENAI:-openai/gpt-4.1-mini}
+      - MODEL_GEMINI=${MODEL_GEMINI:-maia/gemini-2.5-flash}
+      - MODEL_EMBEDDING=${MODEL_EMBEDDING:-openai/text-embedding-3-small}
+      # Cloudinary & DB
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      # App
+      - PORT=3001
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-3002}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # RAG CLI - Jalankan dengan: docker compose run --rm rag-cli
+  rag-cli:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    volumes:
+      - ./assets:/app/assets
+    environment:
+      - MAIA_API_KEY=${MAIA_API_KEY}
+      - MAIA_BASE_URL=${MAIA_BASE_URL:-https://api.maiarouter.ai/v1}
+      - MODEL_OPENAI=${MODEL_OPENAI:-openai/gpt-4.1-mini}
+      - MODEL_GEMINI=${MODEL_GEMINI:-maia/gemini-2.5-flash}
+      - MODEL_EMBEDDING=${MODEL_EMBEDDING:-openai/text-embedding-3-small}
+      - NODE_ENV=production
+    command: ["node", "dist/cli.js"]
+    profiles:
+      - cli

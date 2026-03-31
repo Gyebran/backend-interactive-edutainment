@@ -1,0 +1,201 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  admin
+}
+
+model User {
+  id             String               @id @default(uuid())
+  email          String               @unique
+  studentId      String?              @unique @map("student_id")
+  adminId        String?              @unique @map("admin_id")
+  role           UserRole             @default(student)
+  password       String       // Hashed password
+  name           String?
+  exp            Int          @default(0)
+  level          Int          @default(1)
+  uploads        UploadData[]
+  attempts       QuizAttempt[]
+  seasonProgress UserSeasonProgress[]
+  conversations  Conversation[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt @map("update_at")
+}
+
+model Season {
+  id           String             @id @default(uuid())
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean            @default(false)
+  userProgress UserSeasonProgress[]
+}
+
+model UserSeasonProgress {
+  id        String   @id @default(uuid())
+  userId    String
+  seasonId  String
+  studentId String?
+  exp       Int      @default(0)
+  level     Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  season    Season   @relation(fields: [seasonId], references: [id])
+
+  @@unique([userId, seasonId])
+  @@index([studentId])
+}
+
+enum UploadType {
+  IMAGE
+  PDF
+  PDF_DESCRIPTION
+}
+
+model UploadData {
+  id            String     @id @default(uuid())
+  userId        String
+  studentId     String?
+  user          User       @relation(fields: [userId], references: [id])
+  type          UploadType
+  cloudinaryUrl String?
+  aiContent     Json?      // JSONB support for Neon/Postgres
+  createdAt     DateTime   @default(now())
+  quizzes       Quiz[]
+
+  @@index([studentId])
+}
+
+enum QuestionType {
+  multiple_choice
+}
+
+enum DifficultyLevel {
+  easy
+  medium
+  hard
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+model Quiz {
+  id              String     @id @default(uuid())
+  uploadDataId    String
+  studentId       String?
+  descriptionHash String
+  difficulty      String     @default("random")
+  questionCount   Int        @default(10)
+  language        String     @default("id")
+  createdAt       DateTime   @default(now())
+
+  uploadData      UploadData @relation(fields: [uploadDataId], references: [id])
+  questions       Question[]
+  attempts        QuizAttempt[]
+
+  @@index([uploadDataId])
+  @@index([descriptionHash])
+  @@index([studentId])
+}
+
+model Question {
+  id           String           @id @default(uuid())
+  quizId       String
+  type         QuestionType
+  questionText String
+  answer       String?
+  explanation  String?
+  difficulty   DifficultyLevel
+  createdAt    DateTime         @default(now())
+
+  quiz         Quiz             @relation(fields: [quizId], references: [id])
+  options      QuestionOption[]
+  quizAnswers  QuizAnswer[]
+
+  @@index([quizId])
+}
+
+model QuestionOption {
+  id         String   @id @default(uuid())
+  questionId String
+  optionText String
+  isCorrect  Boolean
+
+  question   Question @relation(fields: [questionId], references: [id])
+  selectedInAnswers QuizAnswer[] @relation("SelectedOption")
+
+  @@index([questionId])
+}
+
+model QuizAttempt {
+  id             String   @id @default(uuid())
+  userId         String
+  quizId         String
+  studentId      String?
+  score          Float
+  correctCount   Int
+  totalQuestions Int
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id])
+  quiz           Quiz     @relation(fields: [quizId], references: [id])
+  answers        QuizAnswer[]
+
+  @@index([userId])
+  @@index([quizId])
+  @@index([studentId])
+}
+
+model QuizAnswer {
+  id               String         @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String?
+  isCorrect        Boolean
+
+  attempt          QuizAttempt    @relation(fields: [attemptId], references: [id])
+  question         Question       @relation(fields: [questionId], references: [id])
+  selectedOption   QuestionOption? @relation("SelectedOption", fields: [selectedOptionId], references: [id])
+
+  @@index([attemptId])
+  @@index([questionId])
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String    @default("Percakapan Baru")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+  @@index([createdAt])
+}

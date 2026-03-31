@@ -1,0 +1,7 @@
+﻿src/controllers/ai.controller.ts(2,22): error TS2307: Cannot find module '../../database' or its corresponding type declarations.
+src/controllers/auth.controller.ts(4,20): error TS2307: Cannot find module '../../database' or its corresponding type declarations.
+src/controllers/upload.controller.ts(2,56): error TS2307: Cannot find module '../../database' or its corresponding type declarations.
+src/engine/content.engine.ts(1,22): error TS2307: Cannot find module '../../database' or its corresponding type declarations.
+src/engine/ragEngine.ts(4,60): error TS2307: Cannot find module '../../database' or its corresponding type declarations.
+src/services/quiz-engine/quizEngine.service.ts(1,22): error TS2307: Cannot find module '../../../database' or its corresponding type declarations.
+src/utils/vectorStore.ts(4,22): error TS2307: Cannot find module '../../database' or its corresponding type declarations.
